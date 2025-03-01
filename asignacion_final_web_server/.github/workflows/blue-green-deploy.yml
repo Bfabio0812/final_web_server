@@ -1,0 +1,37 @@
+name: Blue/Green Deployment and Testing
+
+on:
+  push:
+    branches: [ blue ]
+  workflow_dispatch:
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          if curl -s https://tuusuario.github.io/final_web_server/ | grep "Versión Blue"; then
+            echo "Tests passed!"
+          else
+            echo "Tests failed!"
+            exit 1
+          fi
+
+      - name: Deploy Blue to Production
+        if: success()
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git checkout green
+          git merge blue --no-ff
+          git push origin green
+
+      - name: Rollback if tests fail
+        if: failure()
+        run: echo "Rollback triggered! Keeping the Green version."
+
